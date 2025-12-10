@@ -8,13 +8,11 @@ from datetime import datetime
 import uuid
 import os
 
-# Database setup
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://app:app@localhost:5432/appdb")
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Models
 class User(Base):
     __tablename__ = "users"
     user_id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -42,10 +40,7 @@ class OrderItem(Base):
     item_id = Column(String, ForeignKey("items.item_id"), nullable=False)
     quantity = Column(Integer, nullable=False)
 
-# Create tables
-Base.metadata.create_all(bind=engine)
 
-# Pydantic schemas
 class UserCreate(BaseModel):
     email: str
     name: str
@@ -100,6 +95,15 @@ app = FastAPI(
     description="API for pharmacy management system",
     version="1.0.0"
 )
+
+# Startup event to create tables
+@app.on_event("startup")
+async def startup_event():
+    """Create tables on application startup"""
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"Warning: Could not create tables on startup: {e}")
 
 # Dependency
 def get_db():
