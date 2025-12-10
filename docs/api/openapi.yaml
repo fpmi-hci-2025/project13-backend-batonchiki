@@ -1,0 +1,402 @@
+openapi: 3.0.0
+info:
+  title: Pharmacy API
+  description: API for pharmacy management system - Users, Items, and Orders
+  version: 1.0.0
+  contact:
+    name: Pharmacy Team
+    email: support@pharmacy.local
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: https://api.pharmacy.local
+    description: Production server
+
+paths:
+  /hello:
+    get:
+      summary: Hello World endpoint
+      description: Returns a hello world message to verify the backend is running
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Hello World! Backend is running"
+
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Returns the health status of the backend
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+
+  /api/users:
+    post:
+      summary: Create a new user
+      description: Create a new user in the system
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid input
+
+  /api/users/{user_id}:
+    get:
+      summary: Get user by ID
+      description: Retrieve a user by their unique ID
+      tags:
+        - Users
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: User ID (UUID)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+
+  /api/items:
+    get:
+      summary: List all items
+      description: Retrieve a list of all items in the pharmacy
+      tags:
+        - Items
+      responses:
+        '200':
+          description: List of items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Item'
+
+    post:
+      summary: Create a new item
+      description: Add a new item (medicine/product) to the pharmacy inventory
+      tags:
+        - Items
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemCreate'
+      responses:
+        '201':
+          description: Item created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+
+  /api/items/{item_id}:
+    get:
+      summary: Get item by ID
+      description: Retrieve a specific item by its ID
+      tags:
+        - Items
+      parameters:
+        - name: item_id
+          in: path
+          required: true
+          description: Item ID (UUID)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Item found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        '404':
+          description: Item not found
+
+    put:
+      summary: Update an item
+      description: Update an existing item's details
+      tags:
+        - Items
+      parameters:
+        - name: item_id
+          in: path
+          required: true
+          description: Item ID (UUID)
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemUpdate'
+      responses:
+        '200':
+          description: Item updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        '404':
+          description: Item not found
+
+    delete:
+      summary: Delete an item
+      description: Remove an item from the inventory
+      tags:
+        - Items
+      parameters:
+        - name: item_id
+          in: path
+          required: true
+          description: Item ID (UUID)
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Item deleted successfully
+        '404':
+          description: Item not found
+
+  /api/orders:
+    post:
+      summary: Create a new order
+      description: Create an order for a user with multiple items
+      tags:
+        - Orders
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderCreate'
+      responses:
+        '201':
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Invalid input
+        '404':
+          description: User or item not found
+
+  /api/orders/{order_id}:
+    get:
+      summary: Get order by ID
+      description: Retrieve a specific order by its ID
+      tags:
+        - Orders
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          description: Order ID (UUID)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Order found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '404':
+          description: Order not found
+
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - user_id
+        - email
+        - name
+      properties:
+        user_id:
+          type: string
+          description: Unique user identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        email:
+          type: string
+          format: email
+          description: User email address
+          example: "john@example.com"
+        name:
+          type: string
+          description: User full name
+          example: "John Doe"
+
+    UserCreate:
+      type: object
+      required:
+        - email
+        - name
+      properties:
+        email:
+          type: string
+          format: email
+          description: User email address
+          example: "john@example.com"
+        name:
+          type: string
+          description: User full name
+          example: "John Doe"
+
+    Item:
+      type: object
+      required:
+        - item_id
+        - name
+        - price
+      properties:
+        item_id:
+          type: string
+          description: Unique item identifier
+          example: "550e8400-e29b-41d4-a716-446655440001"
+        name:
+          type: string
+          description: Item name
+          example: "Aspirin"
+        description:
+          type: string
+          nullable: true
+          description: Item description
+          example: "Pain reliever"
+        price:
+          type: number
+          format: double
+          description: Item price in USD
+          example: 5.99
+
+    ItemCreate:
+      type: object
+      required:
+        - name
+        - price
+      properties:
+        name:
+          type: string
+          description: Item name
+          example: "Aspirin"
+        description:
+          type: string
+          nullable: true
+          description: Item description
+          example: "Pain reliever"
+        price:
+          type: number
+          format: double
+          description: Item price in USD
+          example: 5.99
+
+    ItemUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Item name
+          example: "Aspirin Plus"
+        description:
+          type: string
+          nullable: true
+          description: Item description
+        price:
+          type: number
+          format: double
+          description: Item price in USD
+
+    Order:
+      type: object
+      required:
+        - order_id
+        - user_id
+        - created_at
+        - status
+      properties:
+        order_id:
+          type: string
+          description: Unique order identifier
+          example: "550e8400-e29b-41d4-a716-446655440003"
+        user_id:
+          type: string
+          description: User who placed the order
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        created_at:
+          type: string
+          format: date-time
+          description: Order creation timestamp
+        status:
+          type: string
+          description: Order status
+          example: "pending"
+
+    OrderCreate:
+      type: object
+      required:
+        - user_id
+        - items
+      properties:
+        user_id:
+          type: string
+          description: User ID
+        items:
+          type: array
+          description: List of items in the order
+          items:
+            type: object
+            required:
+              - item_id
+              - quantity
+            properties:
+              item_id:
+                type: string
+                description: Item ID
+              quantity:
+                type: integer
+                description: Item quantity
+                minimum: 1
