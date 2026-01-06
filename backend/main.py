@@ -11,10 +11,13 @@ from datetime import datetime
 import uuid
 import os
 
+
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://app:app@localhost:5432/appdb")
+
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
 
 class User(Base):
     __tablename__ = "users"
@@ -29,6 +32,9 @@ class Item(Base):
     name = Column(String, nullable=False)
     description = Column(Text)
     price = Column(Numeric(10, 2), nullable=False)
+
+    # NEW: category
+    category = Column(String, nullable=False, default="Головная боль")
 
     # Images stored in DB (PostgreSQL BYTEA)
     image = Column(LargeBinary, nullable=True)
@@ -69,6 +75,7 @@ class ItemCreate(BaseModel):
     name: str
     description: str | None = None
     price: float
+    category: str = "Головная боль"
 
 
 class ItemResponse(BaseModel):
@@ -76,6 +83,7 @@ class ItemResponse(BaseModel):
     name: str
     description: str | None = None
     price: float
+    category: str
     has_image: bool = False
     image_mime: str | None = None
 
@@ -87,6 +95,7 @@ class ItemUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
     price: float | None = None
+    category: str | None = None
 
 
 class OrderItemCreate(BaseModel):
@@ -112,13 +121,14 @@ class OrderResponse(BaseModel):
 app = FastAPI(
     title="Pharmacy API",
     description="API for pharmacy management system",
-    version="1.1.0",
+    version="1.2.0",
 )
+
 
 @app.on_event("startup")
 async def startup_event():
     # NOTE: create_all does NOT add new columns to existing tables.
-    # You already added columns via ALTER TABLE in Render Postgres.
+    # In Render Postgres use ALTER TABLE for migrations.
     try:
         Base.metadata.create_all(bind=engine)
     except Exception as e:
@@ -160,12 +170,14 @@ def get_user(user_id: str, db: Session = Depends(get_db)):
     return db_user
 
 
+
 def _to_item_response(db_item: Item) -> ItemResponse:
     return ItemResponse(
         item_id=db_item.item_id,
         name=db_item.name,
         description=db_item.description,
         price=float(db_item.price),
+        category=db_item.category,
         has_image=bool(db_item.image),
         image_mime=db_item.image_mime if db_item.image else None,
     )
@@ -179,7 +191,12 @@ def list_items(db: Session = Depends(get_db)):
 
 @app.post("/api/items", response_model=ItemResponse, status_code=201, tags=["Items"])
 def create_item(item: ItemCreate, db: Session = Depends(get_db)):
-    db_item = Item(name=item.name, description=item.description, price=item.price)
+    db_item = Item(
+        name=item.name,
+        description=item.description,
+        price=item.price,
+        category=item.category,
+    )
     db.add(db_item)
     db.commit()
     db.refresh(db_item)
@@ -207,6 +224,8 @@ def update_item(item_id: str, item: ItemUpdate, db: Session = Depends(get_db)):
         db_item.description = item.description
     if item.price is not None:
         db_item.price = item.price
+    if item.category is not None:
+        db_item.category = item.category
 
     db.commit()
     db.refresh(db_item)
@@ -225,7 +244,8 @@ def delete_item(item_id: str, db: Session = Depends(get_db)):
 
 
 ALLOWED_MIME = {"image/jpeg", "image/png", "image/webp"}
-MAX_BYTES = 5 * 1024 * 1024  
+MAX_BYTES = 5 * 1024 * 1024  # 5MB
+
 
 @app.post("/api/items/{item_id}/image", tags=["Items"])
 def upload_item_image(
@@ -261,7 +281,10 @@ def get_item_image(item_id: str, db: Session = Depends(get_db)):
     if not db_item.image:
         raise HTTPException(status_code=404, detail="Image not found")
 
-    return Response(content=db_item.image, media_type=db_item.image_mime or "application/octet-stream")
+    return Response(
+        content=db_item.image,
+        media_type=db_item.image_mime or "application/octet-stream",
+    )
 
 
 @app.post("/api/orders", response_model=OrderResponse, status_code=201, tags=["Orders"])

@@ -4,7 +4,8 @@ info:
   description: >
     API for pharmacy management system - Users, Items, Orders.
     Items support image upload and retrieval (stored in PostgreSQL as BYTEA).
-  version: 1.1.0
+    Items also support a category field (string).
+  version: 1.2.0
   contact:
     name: Pharmacy Team
     email: support@pharmacy.local
@@ -417,7 +418,7 @@ components:
 
     Item:
       type: object
-      required: [item_id, name, price]
+      required: [item_id, name, price, category]
       properties:
         item_id:
           type: string
@@ -437,6 +438,10 @@ components:
           format: double
           description: Item price in USD
           example: 5.99
+        category:
+          type: string
+          description: Item category
+          example: "Головная боль"
         has_image:
           type: boolean
           description: True if image exists for the item
@@ -465,6 +470,11 @@ components:
           format: double
           description: Item price in USD
           example: 5.99
+        category:
+          type: string
+          description: Item category
+          example: "Головная боль"
+          default: "Головная боль"
 
     ItemUpdate:
       type: object
@@ -484,6 +494,11 @@ components:
           format: double
           nullable: true
           description: Item price in USD
+        category:
+          type: string
+          nullable: true
+          description: Item category
+          example: "Головная боль"
 
     ImageUploadResponse:
       type: object
